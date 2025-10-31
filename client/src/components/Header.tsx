@@ -10,17 +10,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 interface HeaderProps {
-  isAuthenticated?: boolean;
-  onLogout?: () => void;
   onSearch?: (query: string) => void;
 }
 
-export default function Header({ isAuthenticated = false, onLogout, onSearch }: HeaderProps) {
+export default function Header({ onSearch }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { isAuthenticated, logout } = useAuth();
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -41,55 +41,47 @@ export default function Header({ isAuthenticated = false, onLogout, onSearch }: 
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/">
-            <a className="flex items-center gap-2 hover-elevate rounded-lg px-3 py-2" data-testid="link-home">
+            <div className="flex items-center gap-2 hover-elevate rounded-lg px-3 py-2 cursor-pointer" data-testid="link-home">
               <Film className="h-6 w-6 text-primary" />
               <span className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                 CineSense
               </span>
-            </a>
+            </div>
           </Link>
 
           {isAuthenticated && (
             <nav className="hidden md:flex items-center gap-1">
               <Link href="/dashboard">
-                <a>
-                  <Button 
-                    variant={location === '/dashboard' ? 'secondary' : 'ghost'}
-                    data-testid="link-dashboard"
-                  >
-                    Dashboard
-                  </Button>
-                </a>
+                <Button 
+                  variant={location === '/dashboard' ? 'secondary' : 'ghost'}
+                  data-testid="link-dashboard"
+                >
+                  Dashboard
+                </Button>
               </Link>
               <Link href="/discover">
-                <a>
-                  <Button 
-                    variant={location === '/discover' ? 'secondary' : 'ghost'}
-                    data-testid="link-discover"
-                  >
-                    Discover
-                  </Button>
-                </a>
+                <Button 
+                  variant={location === '/discover' ? 'secondary' : 'ghost'}
+                  data-testid="link-discover"
+                >
+                  Discover
+                </Button>
               </Link>
               <Link href="/watchlist">
-                <a>
-                  <Button 
-                    variant={location === '/watchlist' ? 'secondary' : 'ghost'}
-                    data-testid="link-watchlist"
-                  >
-                    Watchlist
-                  </Button>
-                </a>
+                <Button 
+                  variant={location === '/watchlist' ? 'secondary' : 'ghost'}
+                  data-testid="link-watchlist"
+                >
+                  Watchlist
+                </Button>
               </Link>
               <Link href="/analytics">
-                <a>
-                  <Button 
-                    variant={location === '/analytics' ? 'secondary' : 'ghost'}
-                    data-testid="link-analytics"
-                  >
-                    Analytics
-                  </Button>
-                </a>
+                <Button 
+                  variant={location === '/analytics' ? 'secondary' : 'ghost'}
+                  data-testid="link-analytics"
+                >
+                  Analytics
+                </Button>
               </Link>
             </nav>
           )}
@@ -136,8 +128,8 @@ export default function Header({ isAuthenticated = false, onLogout, onSearch }: 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => {
-                    onLogout?.();
-                    console.log('User logged out');
+                    logout();
+                    setLocation('/');
                   }}
                   data-testid="menu-logout"
                 >
@@ -149,18 +141,14 @@ export default function Header({ isAuthenticated = false, onLogout, onSearch }: 
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/login">
-                <a>
-                  <Button variant="ghost" data-testid="button-login">
-                    Login
-                  </Button>
-                </a>
+                <Button variant="ghost" data-testid="button-login">
+                  Login
+                </Button>
               </Link>
               <Link href="/register">
-                <a>
-                  <Button data-testid="button-signup">
-                    Sign Up
-                  </Button>
-                </a>
+                <Button data-testid="button-signup">
+                  Sign Up
+                </Button>
               </Link>
             </div>
           )}

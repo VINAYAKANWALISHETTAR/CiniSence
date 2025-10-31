@@ -3,22 +3,51 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Film } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { register } = useAuth();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (password !== confirmPassword) {
-      console.log('Passwords do not match');
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive",
+      });
       return;
     }
-    console.log('Register attempt:', { name, email, password });
+    
+    setIsLoading(true);
+    
+    try {
+      await register(email, password, name);
+      toast({
+        title: "Welcome to CineSense!",
+        description: "Your account has been created successfully.",
+      });
+      setLocation('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: "Registration failed",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -90,8 +119,8 @@ export default function Register() {
             />
           </div>
 
-          <Button type="submit" className="w-full" data-testid="button-register">
-            Create Account
+          <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-register">
+            {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
 

@@ -1,10 +1,9 @@
 import Header from "@/components/Header";
 import MovieCard from "@/components/MovieCard";
 import { Heart } from "lucide-react";
-import type { Movie } from "@/lib/types";
 
 export default function Watchlist() {
-  const mockWatchlist: Movie[] = [
+  const mockWatchlist: any[] = [
     {
       id: 1,
       title: "Inception",
@@ -39,7 +38,7 @@ export default function Watchlist() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAuthenticated={true} />
+      <Header />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import MoodSelector from "@/components/MoodSelector";
 import AIMoodDetector from "@/components/AIMoodDetector";
@@ -6,54 +7,27 @@ import MovieCard from "@/components/MovieCard";
 import GenreSelector from "@/components/GenreSelector";
 import { Card } from "@/components/ui/card";
 import { Film, Heart, Star } from "lucide-react";
-import type { MoodType, Movie } from "@/lib/types";
+import type { MoodType } from "@/lib/types";
+import { movies as moviesApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Dashboard() {
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<number[]>([28, 35, 878]);
+  const { user } = useAuth();
 
-  const mockMovies: Movie[] = [
-    {
-      id: 1,
-      title: "Inception",
-      posterPath: "/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-      backdropPath: "/s3TBrRGB1iav7gFOCNx3H31MoES.jpg",
-      overview: "A thief who steals corporate secrets through dream-sharing technology.",
-      releaseDate: "2010-07-16",
-      voteAverage: 8.4,
-      genreIds: [28, 878, 53]
-    },
-    {
-      id: 2,
-      title: "The Shawshank Redemption",
-      posterPath: "/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg",
-      backdropPath: "/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg",
-      overview: "Two imprisoned men bond over years, finding solace and redemption.",
-      releaseDate: "1994-09-23",
-      voteAverage: 8.7,
-      genreIds: [18, 80]
-    },
-    {
-      id: 3,
-      title: "The Dark Knight",
-      posterPath: "/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-      backdropPath: "/hkBaDkMWbLaf8B1lsWsKX7Ew3Xq.jpg",
-      overview: "Batman faces the Joker in an epic battle for Gotham's soul.",
-      releaseDate: "2008-07-18",
-      voteAverage: 8.5,
-      genreIds: [28, 80, 18]
-    },
-    {
-      id: 4,
-      title: "Interstellar",
-      posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-      backdropPath: "/xu9zaAevzQ5nnrsXN6JcahLnG4i.jpg",
-      overview: "A team of explorers travel through a wormhole in space.",
-      releaseDate: "2014-11-07",
-      voteAverage: 8.6,
-      genreIds: [12, 18, 878]
-    }
-  ];
+  const { data: recommendedMovies = [] } = useQuery({
+    queryKey: ['/api/movies/recommend'],
+    enabled: !!user
+  });
+
+  const { data: moodMovies = [] } = useQuery({
+    queryKey: ['/api/movies/by-mood', selectedMood],
+    queryFn: () => selectedMood ? moviesApi.getByMood(selectedMood) : Promise.resolve([]),
+    enabled: !!selectedMood
+  });
+
+  const displayMovies = selectedMood ? moodMovies : recommendedMovies;
 
   const handleMoodDetected = (mood: MoodType, confidence: number) => {
     setSelectedMood(mood);
@@ -70,7 +44,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isAuthenticated={true} />
+      <Header />
       
       <main className="container mx-auto px-4 py-8 space-y-12">
         <div>
@@ -138,16 +112,33 @@ export default function Dashboard() {
               {selectedMood ? `${selectedMood} Movies` : 'Recommended For You'}
             </h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {mockMovies.map(movie => (
-              <MovieCard 
-                key={movie.id}
-                movie={movie}
-                onWatchlistToggle={(id) => console.log('Toggled watchlist:', id)}
-                onRate={(id, rating) => console.log('Rated:', id, rating)}
-              />
-            ))}
-          </div>
+          {displayMovies.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {displayMovies.map((movie: any) => (
+                <MovieCard 
+                  key={movie.id}
+                  movie={{
+                    id: movie.id,
+                    title: movie.title,
+                    posterPath: movie.poster_path,
+                    backdropPath: movie.backdrop_path,
+                    overview: movie.overview,
+                    releaseDate: movie.release_date,
+                    voteAverage: movie.vote_average,
+                    genreIds: movie.genre_ids
+                  }}
+                  onWatchlistToggle={(id) => console.log('Toggled watchlist:', id)}
+                  onRate={(id, rating) => console.log('Rated:', id, rating)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {selectedMood ? 'Loading movies...' : 'Select a mood to get started!'}
+              </p>
+            </div>
+          )}
         </div>
       </main>
     </div>

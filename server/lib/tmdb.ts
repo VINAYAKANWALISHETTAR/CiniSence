@@ -1,5 +1,28 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
+import https from 'https';
+
+// Load environment variables with explicit path for Windows
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
+
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+// Create an HTTPS agent with relaxed SSL settings for Windows environments
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false, // Only for development environments
+  keepAlive: true,
+});
+
+if (!TMDB_API_KEY) {
+  console.error('ERROR: TMDB_API_KEY is not defined in environment variables');
+  console.error('Checked .env file at:', envPath);
+}
 
 export interface TMDBMovie {
   id: number;
@@ -26,17 +49,41 @@ const moodToGenreMap: Record<string, number[]> = {
   Relaxed: [99, 10402, 10770]
 };
 
-export async function getTrendingMovies(): Promise<TMDBMovie[]> {
+// Helper function to make HTTP requests with better error handling
+async function makeRequest(url: string): Promise<any> {
   try {
-    const response = await fetch(
-      `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
-    );
+    console.log(`Making request to: ${url}`);
+    
+    const response = await fetch(url, {
+      agent: httpsAgent,
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'CineSensePlatform/1.0'
+      }
+    });
+    
+    console.log(`Response status: ${response.status}`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch trending movies');
+      const errorText = await response.text();
+      console.error(`HTTP Error: ${response.status} - ${response.statusText}`, errorText);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
+    console.log(`Successfully fetched data with ${data.results ? data.results.length : 'no'} results`);
+    return data;
+  } catch (error: any) {
+    console.error(`Request failed for URL: ${url}`, error);
+    throw error;
+  }
+}
+
+export async function getTrendingMovies(): Promise<TMDBMovie[]> {
+  try {
+    const data = await makeRequest(
+      `${TMDB_BASE_URL}/trending/movie/week?api_key=${TMDB_API_KEY}`
+    );
     return data.results || [];
   } catch (error) {
     console.error('Error fetching trending movies:', error);
@@ -46,15 +93,9 @@ export async function getTrendingMovies(): Promise<TMDBMovie[]> {
 
 export async function getPopularMovies(): Promise<TMDBMovie[]> {
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch popular movies');
-    }
-    
-    const data = await response.json();
     return data.results || [];
   } catch (error) {
     console.error('Error fetching popular movies:', error);
@@ -64,15 +105,9 @@ export async function getPopularMovies(): Promise<TMDBMovie[]> {
 
 export async function getTopRatedMovies(): Promise<TMDBMovie[]> {
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/movie/top_rated?api_key=${TMDB_API_KEY}`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch top rated movies');
-    }
-    
-    const data = await response.json();
     return data.results || [];
   } catch (error) {
     console.error('Error fetching top rated movies:', error);
@@ -82,15 +117,9 @@ export async function getTopRatedMovies(): Promise<TMDBMovie[]> {
 
 export async function searchMovies(query: string): Promise<TMDBMovie[]> {
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to search movies');
-    }
-    
-    const data = await response.json();
     return data.results || [];
   } catch (error) {
     console.error('Error searching movies:', error);
@@ -106,15 +135,9 @@ export async function getMoviesByMood(mood: string): Promise<TMDBMovie[]> {
   }
   
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreIds.join(',')}&sort_by=popularity.desc`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch movies by mood');
-    }
-    
-    const data = await response.json();
     return data.results || [];
   } catch (error) {
     console.error('Error fetching movies by mood:', error);
@@ -128,15 +151,9 @@ export async function getMoviesByGenres(genreIds: number[]): Promise<TMDBMovie[]
   }
   
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genreIds.join(',')}&sort_by=popularity.desc`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch movies by genres');
-    }
-    
-    const data = await response.json();
     return data.results || [];
   } catch (error) {
     console.error('Error fetching movies by genres:', error);
@@ -146,15 +163,11 @@ export async function getMoviesByGenres(genreIds: number[]): Promise<TMDBMovie[]
 
 export async function getMovieDetails(movieId: number) {
   try {
-    const response = await fetch(
-      `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=credits,videos`
+    // Make the request with videos, credits, and images to get comprehensive data
+    const data = await makeRequest(
+      `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&append_to_response=videos,credits,images&include_image_language=en,null`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch movie details');
-    }
-    
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Error fetching movie details:', error);
     return null;
@@ -163,15 +176,9 @@ export async function getMovieDetails(movieId: number) {
 
 export async function getGenres(): Promise<TMDBGenre[]> {
   try {
-    const response = await fetch(
+    const data = await makeRequest(
       `${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}`
     );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch genres');
-    }
-    
-    const data = await response.json();
     return data.genres || [];
   } catch (error) {
     console.error('Error fetching genres:', error);

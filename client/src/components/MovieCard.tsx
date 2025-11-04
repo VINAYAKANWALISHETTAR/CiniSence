@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Heart, Star, Play } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { ratings as ratingsApi } from "@/lib/api";
 import type { Movie } from "@/lib/types";
 
 interface MovieCardProps {
@@ -22,19 +23,57 @@ export default function MovieCard({
   const [showOverlay, setShowOverlay] = useState(false);
   const [currentRating, setCurrentRating] = useState(userRating || 0);
   const [isWatchlisted, setIsWatchlisted] = useState(isInWatchlist);
+  const [isRating, setIsRating] = useState(false);
 
   const posterUrl = movie.posterPath 
     ? `https://image.tmdb.org/t/p/w500${movie.posterPath}`
     : 'https://via.placeholder.com/500x750?text=No+Poster';
 
+  // Fetch existing rating for this movie
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        const rating = await ratingsApi.getForMovie(movie.id);
+        if (rating) {
+          setCurrentRating(rating.rating);
+        }
+      } catch (error) {
+        // Failed to fetch rating for movie
+      }
+    };
+
+    if (movie.id) {
+      fetchRating();
+    }
+  }, [movie.id]);
+
   const handleWatchlistClick = () => {
-    setIsWatchlisted(!isWatchlisted);
+    const newState = !isWatchlisted;
+    setIsWatchlisted(newState);
     onWatchlistToggle?.(movie.id);
   };
 
-  const handleRating = (rating: number) => {
-    setCurrentRating(rating);
-    onRate?.(movie.id, rating);
+  const handleRating = async (rating: number) => {
+    setIsRating(true);
+    try {
+      // Send rating to backend
+      await ratingsApi.add(movie.id, rating);
+      
+      // Update local state
+      setCurrentRating(rating);
+      
+      // Notify parent component
+      onRate?.(movie.id, rating);
+    } catch (error) {
+      // Failed to rate movie
+    } finally {
+      setIsRating(false);
+    }
+  };
+
+  const handleViewDetails = () => {
+    // Navigate to movie details page
+    window.location.href = `/movies/${movie.id}`;
   };
 
   return (
@@ -87,7 +126,8 @@ export default function MovieCard({
                 <button
                   key={star}
                   onClick={() => handleRating(star)}
-                  className="hover:scale-110 transition-transform"
+                  disabled={isRating}
+                  className="hover:scale-110 transition-transform disabled:opacity-50"
                   data-testid={`button-rate-${movie.id}-${star}`}
                 >
                   <Star 
@@ -104,6 +144,7 @@ export default function MovieCard({
             <Button 
               size="sm" 
               className="w-full backdrop-blur-md bg-primary/90 hover:bg-primary"
+              onClick={handleViewDetails}
               data-testid={`button-details-${movie.id}`}
             >
               <Play className="h-4 w-4 mr-2" />

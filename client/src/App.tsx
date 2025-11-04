@@ -12,6 +12,8 @@ import Dashboard from "@/pages/Dashboard";
 import Discover from "@/pages/Discover";
 import Watchlist from "@/pages/Watchlist";
 import Analytics from "@/pages/Analytics";
+import MovieDetails from "@/pages/MovieDetails";
+import Profile from "@/pages/Profile";
 
 function Router() {
   return (
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/discover" component={Discover} />
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/movies/:id" component={MovieDetails} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );

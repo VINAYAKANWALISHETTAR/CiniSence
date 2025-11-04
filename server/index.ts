@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
 
 const app = express();
 
@@ -15,6 +16,29 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Test route to check database connectivity
+app.get("/api/test-db", async (_req: Request, res: Response) => {
+  try {
+    // Try to get a user (any operation to test DB connection)
+    // Using a non-existent ID to avoid returning real data
+    const user = await storage.getUser("test-id");
+    
+    // If we get here without an exception, the DB connection is working
+    res.json({
+      success: true,
+      message: "Database connection successful",
+      storageType: storage.constructor.name,
+      user: user || null
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+      error: error.message
+    });
+  }
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -71,11 +95,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 })();

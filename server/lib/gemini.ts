@@ -1,5 +1,20 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Load environment variables with explicit path for Windows
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath = path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+if (!GEMINI_API_KEY) {
+  console.error('ERROR: GEMINI_API_KEY is not defined in environment variables');
+  console.error('Checked .env file at:', envPath);
+}
 
 export async function detectMoodFromText(text: string): Promise<{ mood: string; confidence: number }> {
   try {

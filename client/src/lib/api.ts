@@ -1,6 +1,6 @@
 const API_BASE = '/api';
 
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);
     this.name = 'ApiError';
@@ -16,7 +16,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   };
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
